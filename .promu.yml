@@ -1,0 +1,23 @@
+go: 1.9.2
+verbose: false
+repository:
+    path: github.com/banzaicloud/spot_expiry_collector
+build:
+    prefix: .
+    binaries:
+        - name: spot_expiry_exporter
+          path: .
+    flags: -a -tags netgo
+    ldflags: |
+        -s
+        -X {{repoPath}}/version.Version={{.Version}}
+        -X {{repoPath}}/version.Revision={{.Revision}}
+        -X {{repoPath}}/version.Branch={{.Branch}}
+        -X {{repoPath}}/version.BuildUser={{user}}@{{host}}
+        -X {{repoPath}}/version.BuildDate={{date "20160902-15:04:05"}}
+tarball:
+    prefix: .
+crossbuild:
+    platforms:
+        - linux/amd64
+        - linux/386
