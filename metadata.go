@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	metadataEndpoint = "http://169.254.169.254/latest/meta-data/spot/instance-action"
+	metadataEndpoint = "http://localhost:9092/latest/meta-data/"
 )
 
 type terminationCollector struct {
@@ -31,7 +31,7 @@ func init() {
 func NewTerminationCollector() *terminationCollector {
 	return &terminationCollector{
 		scrapeSuccessful:     prometheus.NewDesc("metadata_service_available", "Metadata service available", nil, nil),
-		terminationIndicator: prometheus.NewDesc("termination_imminent", "Instance is about to be terminated", []string{"instance_action"}, nil),
+		terminationIndicator: prometheus.NewDesc("termination_imminent", "Instance is about to be terminated", []string{"instance_action", "instance_id"}, nil),
 		terminationTime:      prometheus.NewDesc("termination_in", "Instance will be terminated in", nil, nil),
 	}
 }
@@ -49,7 +49,7 @@ func (c *terminationCollector) Collect(ch chan<- prometheus.Metric) {
 	client := http.Client{
 		Timeout: timeout,
 	}
-	resp, err := client.Get(metadataEndpoint)
+	resp, err := client.Get(metadataEndpoint + "spot/instance-action")
 	if err != nil {
 		log.Errorf("Failed to fetch data from metadata service: %s", err)
 		ch <- prometheus.MustNewConstMetric(c.scrapeSuccessful, prometheus.GaugeValue, 0)
@@ -75,7 +75,15 @@ func (c *terminationCollector) Collect(ch chan<- prometheus.Metric) {
 				ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 0)
 			} else {
 				log.Infof("instance-action endpoint available, termination time: %v", ia.Time)
-				ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 1, ia.Action)
+				resp, err := client.Get(metadataEndpoint + "instance-id")
+				var instanceId string
+				if err != nil {
+					log.Errorf("couldn't parse instance-id from metadata: %s", err.Error())
+				}
+				defer resp.Body.Close()
+				body, _ := ioutil.ReadAll(resp.Body)
+				instanceId = string(body)
+				ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 1, ia.Action, instanceId)
 				delta := ia.Time.Sub(time.Now())
 				if delta.Seconds() > 0 {
 					ch <- prometheus.MustNewConstMetric(c.terminationTime, prometheus.GaugeValue, delta.Seconds())
