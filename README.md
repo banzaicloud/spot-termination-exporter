@@ -1,6 +1,6 @@
 ## Spot instance termination collector
 
-Prometheus [collectors](https://prometheus.io/docs/instrumenting/writing_exporters/#collectors) are part of exporters - this is a collector to scrape for AWS spot price termination notice on the instance for Hollowtrees.
+Prometheus [collectors](https://prometheus.io/docs/instrumenting/writing_exporters/#collectors) are part of exporters - this is a collector to scrape for AWS spot price termination notice on the instance for [Hollowtrees](https://github.com/banzaicloud/hollowtrees).
 
 ### Spot instance lifecycle
 
