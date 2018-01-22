@@ -25,14 +25,15 @@ type InstanceAction struct {
 }
 
 func init() {
+	log.Debug("registering term collector")
 	prometheus.MustRegister(NewTerminationCollector())
 }
 
 func NewTerminationCollector() *terminationCollector {
 	return &terminationCollector{
-		scrapeSuccessful:     prometheus.NewDesc("metadata_service_available", "Metadata service available", nil, nil),
-		terminationIndicator: prometheus.NewDesc("termination_imminent", "Instance is about to be terminated", []string{"instance_action", "instance_id"}, nil),
-		terminationTime:      prometheus.NewDesc("termination_in", "Instance will be terminated in", nil, nil),
+		scrapeSuccessful:     prometheus.NewDesc("aws_instance_metadata_service_available", "Metadata service available", nil, nil),
+		terminationIndicator: prometheus.NewDesc("aws_instance_termination_imminent", "Instance is about to be terminated", []string{"instance_action", "instance_id"}, nil),
+		terminationTime:      prometheus.NewDesc("aws_instance_termination_in", "Instance will be terminated in", nil, nil),
 	}
 }
 
