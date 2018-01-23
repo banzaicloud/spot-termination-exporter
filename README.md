@@ -42,7 +42,7 @@ Usage of ./spot_expiry_exporter:
 ### Test locally
 
 The AWS instance metadata is available at `http://169.254.169.254/latest/meta-data/`. By default this is the endpoint that is being queried by the exporter but it is quite hard to reproduce a termination notice on an AWS instance for testing, so the meta-data endpoint can be changed in the configuration.
-There is a test server in the `utils` directory that can be used to mock the behavior of the metadata endpoint. It listens on port 9092and provides dummy responses for `/instance-id` and `spot/instance-action`. It can be started with:
+There is a test server in the `utils` directory that can be used to mock the behavior of the metadata endpoint. It listens on port 9092 and provides dummy responses for `/instance-id` and `/spot/instance-action`. It can be started with:
 ```
 go run util/test_server.go
 ```
