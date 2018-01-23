@@ -56,11 +56,11 @@ The exporter can be started with this configuration to query this endpoint local
 ```
 # HELP aws_instance_metadata_service_available Metadata service available
 # TYPE aws_instance_metadata_service_available gauge
-aws_instance_metadata_service_available 1
+aws_instance_metadata_service_available{instance_id="i-0d2aab13057917887"} 1
 # HELP aws_instance_termination_imminent Instance is about to be terminated
 # TYPE aws_instance_termination_imminent gauge
 aws_instance_termination_imminent{instance_action="stop",instance_id="i-0d2aab13057917887"} 1
 # HELP aws_instance_termination_in Instance will be terminated in
 # TYPE aws_instance_termination_in gauge
-aws_instance_termination_in 119.354569
+aws_instance_termination_in{instance_id="i-0d2aab13057917887"} 119.888545
 ```
