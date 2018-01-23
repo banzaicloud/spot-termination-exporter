@@ -9,11 +9,8 @@ import (
 	"encoding/json"
 )
 
-const (
-	metadataEndpoint = "http://localhost:9092/latest/meta-data/"
-)
-
 type terminationCollector struct {
+	metadataEndpoint     string
 	scrapeSuccessful     *prometheus.Desc
 	terminationIndicator *prometheus.Desc
 	terminationTime      *prometheus.Desc
@@ -24,13 +21,9 @@ type InstanceAction struct {
 	Time   time.Time `json:"time"`
 }
 
-func init() {
-	log.Debug("registering term collector")
-	prometheus.MustRegister(NewTerminationCollector())
-}
-
-func NewTerminationCollector() *terminationCollector {
+func NewTerminationCollector(me string) *terminationCollector {
 	return &terminationCollector{
+		metadataEndpoint:     me,
 		scrapeSuccessful:     prometheus.NewDesc("aws_instance_metadata_service_available", "Metadata service available", nil, nil),
 		terminationIndicator: prometheus.NewDesc("aws_instance_termination_imminent", "Instance is about to be terminated", []string{"instance_action", "instance_id"}, nil),
 		terminationTime:      prometheus.NewDesc("aws_instance_termination_in", "Instance will be terminated in", nil, nil),
@@ -50,7 +43,21 @@ func (c *terminationCollector) Collect(ch chan<- prometheus.Metric) {
 	client := http.Client{
 		Timeout: timeout,
 	}
-	resp, err := client.Get(metadataEndpoint + "spot/instance-action")
+	idResp, err := client.Get(c.metadataEndpoint + "instance-id")
+	var instanceId string
+	if err != nil {
+		log.Errorf("couldn't parse instance-id from metadata: %s", err.Error())
+		return
+	}
+	if idResp.StatusCode == 404 {
+		log.Errorf("couldn't parse instance-id from metadata: endpoint not found",)
+		return
+	}
+	defer idResp.Body.Close()
+	body, _ := ioutil.ReadAll(idResp.Body)
+	instanceId = string(body)
+
+	resp, err := client.Get(c.metadataEndpoint + "spot/instance-action")
 	if err != nil {
 		log.Errorf("Failed to fetch data from metadata service: %s", err)
 		ch <- prometheus.MustNewConstMetric(c.scrapeSuccessful, prometheus.GaugeValue, 0)
@@ -60,7 +67,7 @@ func (c *terminationCollector) Collect(ch chan<- prometheus.Metric) {
 
 		if resp.StatusCode == 404 {
 			log.Debug("instance-action endpoint not found")
-			ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 0)
+			ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 0, "", instanceId)
 			return
 		} else {
 			defer resp.Body.Close()
@@ -76,14 +83,6 @@ func (c *terminationCollector) Collect(ch chan<- prometheus.Metric) {
 				ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 0)
 			} else {
 				log.Infof("instance-action endpoint available, termination time: %v", ia.Time)
-				resp, err := client.Get(metadataEndpoint + "instance-id")
-				var instanceId string
-				if err != nil {
-					log.Errorf("couldn't parse instance-id from metadata: %s", err.Error())
-				}
-				defer resp.Body.Close()
-				body, _ := ioutil.ReadAll(resp.Body)
-				instanceId = string(body)
 				ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 1, ia.Action, instanceId)
 				delta := ia.Time.Sub(time.Now())
 				if delta.Seconds() > 0 {
