@@ -64,3 +64,8 @@ aws_instance_termination_imminent{instance_action="stop",instance_id="i-0d2aab13
 # TYPE aws_instance_termination_in gauge
 aws_instance_termination_in{instance_id="i-0d2aab13057917887"} 119.888545
 ```
+
+### Default Hollowtrees node exporters associated to alerts:
+
+* AWS spot instance termination [collector](https://github.com/banzaicloud/spot-termination-collector)
+* AWS autoscaling group [exporter](https://github.com/banzaicloud/aws-autoscaling-exporter)
