@@ -5,8 +5,9 @@ Prometheus [exporters](https://prometheus.io/docs/instrumenting/writing_exporter
 ### Spot instance lifecycle
 
 * User submits a bid to run a desired number of EC2 instances of a particular type. The bid includes the price that the user is willing to pay to use the instance for an hour.
-* When the bid price exceeds the current spot price (which varies based on supply and demand), the instances are run.
-* When the current spot price rises above the bid price, the spot instance is reclaimed by AWS so that it can be given to another customer.
+* If the bid price exceeds the current spot price (that is determined by AWS based on current supply and demand) the instances are started.
+* If the current spot price rises above the bid price or there is no available capacity, the spot instance is interrupted and reclaimed by AWS. 2 minutes before the interruption the internal metadata endpoint on the instance is updated with the termination info.
+* If the instance is interrupted the action taken by AWS varies depending on the interruption behaviour (start, stop or hibernate) and the request type (one-time or persistent). These can be configured when requesting the instance. See more about this [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html#creating-spot-request-status)
 
 ### Spot instance termination notice
 
