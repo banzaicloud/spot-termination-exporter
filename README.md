@@ -27,8 +27,8 @@ promu build
 The following options can be configured when starting the exporter:
 
 ```
-./spot_expiry_exporter --help
-Usage of ./spot_expiry_exporter:
+./spot-termination-exporter --help
+Usage of ./spot-termintation-exporter:
   -bind-addr string
         bind address for the metrics server (default ":9189")
   -log-level string
@@ -49,7 +49,7 @@ go run util/test_server.go
 ```
 The exporter can be started with this configuration to query this endpoint locally:
 ```
-./spot_expiry_exporter --metadata-endpoint http://localhost:9092/latest/meta-data/ --log-level debug
+./spot-termination-exporter --metadata-endpoint http://localhost:9092/latest/meta-data/ --log-level debug
 ```
 
 ### Metrics
