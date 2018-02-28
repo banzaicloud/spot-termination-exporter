@@ -1,11 +1,11 @@
 go: 1.9.2
 verbose: false
 repository:
-    path: github.com/banzaicloud/spot_expiry_collector
+    path: github.com/banzaicloud/spot-termination-exporter
 build:
     prefix: .
     binaries:
-        - name: spot_expiry_exporter
+        - name: spot-termination-exporter
           path: .
     flags: -a -tags netgo
     ldflags: |

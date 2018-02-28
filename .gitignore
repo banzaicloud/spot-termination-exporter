@@ -2,5 +2,5 @@
 .build
 .tarballs
 .DS_STORE
-spot_expiry_collector
-spot_expiry_exporter
+spot-termination-exporter
+

@@ -30,9 +30,9 @@ var metadataEndpoint = flag.String("metadata-endpoint", "http://169.254.169.254/
 
 func main() {
 	log.SetLevel(logLevel)
-	log.Info("Starting spot_expiry_collector")
+	log.Info("Starting spot-termination-exporter")
 
-	log.Debug("registering term collector")
+	log.Debug("registering term exporter")
 	prometheus.MustRegister(NewTerminationCollector(*metadataEndpoint))
 
 	go serveMetrics()
@@ -52,9 +52,9 @@ func serveMetrics() {
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`<html>
-		<head><title>Spot Expiry Exporter</title></head>
+		<head><title>Spot Termination Exporter</title></head>
 		<body>
-		<h1>Spot Expiry Exporter</h1>
+		<h1>Spot Termination Exporter</h1>
 		<p><a href="` + *metricsPath + `">Metrics</a></p>
 		</body>
 		</html>`))
