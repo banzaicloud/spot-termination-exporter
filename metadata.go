@@ -1,12 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"time"
-	"encoding/json"
 )
 
 type terminationCollector struct {
@@ -50,7 +50,7 @@ func (c *terminationCollector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 	if idResp.StatusCode == 404 {
-		log.Errorf("couldn't parse instance-id from metadata: endpoint not found",)
+		log.Errorf("couldn't parse instance-id from metadata: endpoint not found")
 		return
 	}
 	defer idResp.Body.Close()

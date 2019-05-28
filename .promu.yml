@@ -1,4 +1,5 @@
-go: 1.9.2
+go:
+  version: 1.9.2
 verbose: false
 repository:
     path: github.com/banzaicloud/spot-termination-exporter
