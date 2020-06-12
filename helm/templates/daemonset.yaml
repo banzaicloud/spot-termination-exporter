@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: "{{ template "spotTerminationexporter.fullname" . }}"
+  labels:
+    app: "{{ template "spotTerminationexporter.fullname" . }}"
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "spotTerminationexporter.fullname" . }}
+      component: "{{ template "spotTerminationexporter.fullname" . }}"
+  template:
+    metadata:
+      labels:
+        heritage: "{{ .Release.Service }}"
+        release: "{{ .Release.Name }}"
+        app: {{ template "spotTerminationexporter.fullname" . }}
+        component: "{{ template "spotTerminationexporter.fullname" . }}"
+      annotations:
+        prometheus.io/scrape: "true"
+
+    spec:
+      containers:
+      - name: spot-termination-exporter
+        image: "{{ .Values.spotTerminationexporter.image.repository }}:{{ .Values.spotTerminationexporter.image.tag }}"
+        imagePullPolicy: {{ .Values.spotTerminationexporter.image.imagePullPolicy | quote }}
+
+        command:
+        - "/bin/sh"
+        - "-ecx"
+        - |
+          spot-termination-exporter \
+          --bind-addr :{{ .Values.spotTerminationexporter.bindAddr }} \
+          --metrics-path {{ .Values.spotTerminationexporter.metricsPath }} \
+          --metadata-endpoint {{ .Values.spotTerminationexporter.metadataEndpoint }} \
+          --log-level {{ .Values.spotTerminationexporter.logLevel }}
+
+        env:
+        - name: SPOTINST_TOKEN
+          value: "{{ .Values.spotTerminationexporter.spotinst_token }}"
+        - name: SPOTINST_ACCOUNT_ID
+          value: "{{ .Values.spotTerminationexporter.spotinst_accountId }}"
+ 
+        ports:
+        - name: http
+          containerPort: {{ .Values.spotTerminationexporter.bindAddr }}
+        {{- if .Values.spotTerminationexporter.hostPort }}
+          hostPort: {{ .Values.spotTerminationexporter.hostPort }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 120
+          timeoutSeconds: 5
+          failureThreshold: 6
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+            httpHeaders:
+          initialDelaySeconds: 30
+          timeoutSeconds: 3
+          periodSeconds: 5
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.securityContext }}
+      securityContext:
+{{ toYaml . | indent 8 }}
+    {{- end }}
