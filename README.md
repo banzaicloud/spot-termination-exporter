@@ -1,3 +1,33 @@
+## Overview
+
+The original [banzaicloud/spot-termination-exporter](https://github.com/banzaicloud/spot-termination-exporter) was updated with new label `spotinst_status` for `aws_instance_termination_imminent` metric.
+In addition to checking instance's metadata, the exporter for now also checks the status of an instance vie Spotinst API.
+
+The possible values for `spotinst_status` label:
+- __not_available__ - Spotinst token or account_id are not set.
+- __ACTIVE__ - the instance is running.
+- __TERMINATING__ - the instance will be terminated by Spotinst.
+
+The `aws_instance_termination_imminent` metric has the **1** value in two cases:
+- the exporter got the instance spot action metadata and label `instance_action="stop"`.
+- the label `spotinst_status` has __TERMINATING__ value.
+
+To deploy helm chart:
+
+```sh
+helm upgrade --install \
+  --namespace=monitoring --set tolerations[0].effect=NoSchedule \
+  --set tolerations[0].key=codefresh.io \
+  --set tolerations[0].operator=Equal \
+  --set tolerations[0].value=dinds  \
+  --set nodeSelector.node-type=dinds-spotinst  \
+  --set spotTerminationexporter.spotinst_token=<SPOTINST TOKEN> \
+  --set spotTerminationexporter.spotinst_accountId=<SPOTINST ACCOUNT ID> \
+  --set spotTerminationexporter.image.repository=codefresh/spot-termination-exporter \
+  --set spotTerminationexporter.image.tag=latest \
+  spot-termination-exporter helm/
+```
+
 ## Spot instance termination exporter
 
 Prometheus [exporters](https://prometheus.io/docs/instrumenting/writing_exporters) are used to export metrics from third-party systems as Prometheus metrics - this is an exporter to scrape for AWS spot price termination notice on the instance for [Hollowtrees](https://github.com/banzaicloud/hollowtrees).
