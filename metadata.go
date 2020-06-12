@@ -25,7 +25,7 @@ func NewTerminationCollector(me string) *terminationCollector {
 	return &terminationCollector{
 		metadataEndpoint:     me,
 		scrapeSuccessful:     prometheus.NewDesc("aws_instance_metadata_service_available", "Metadata service available", []string{"instance_id"}, nil),
-		terminationIndicator: prometheus.NewDesc("aws_instance_termination_imminent", "Instance is about to be terminated", []string{"instance_action", "instance_id"}, nil),
+		terminationIndicator: prometheus.NewDesc("aws_instance_termination_imminent", "Instance is about to be terminated", []string{"instance_action", "instance_id", "spotinst_status"}, nil),
 		terminationTime:      prometheus.NewDesc("aws_instance_termination_in", "Instance will be terminated in", []string{"instance_id"}, nil),
 	}
 }
@@ -57,6 +57,8 @@ func (c *terminationCollector) Collect(ch chan<- prometheus.Metric) {
 	body, _ := ioutil.ReadAll(idResp.Body)
 	instanceId = string(body)
 
+	spotinstStatus := getSpotinstStatus(instanceId)
+
 	resp, err := client.Get(c.metadataEndpoint + "spot/instance-action")
 	if err != nil {
 		log.Errorf("Failed to fetch data from metadata service: %s", err)
@@ -67,7 +69,11 @@ func (c *terminationCollector) Collect(ch chan<- prometheus.Metric) {
 
 		if resp.StatusCode == 404 {
 			log.Debug("instance-action endpoint not found")
-			ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 0, "", instanceId)
+			if spotinstStatus == "TERMINATING" {
+				ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 1, "", instanceId, spotinstStatus)
+			} else {
+				ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 0, "", instanceId, spotinstStatus)
+			}
 			return
 		} else {
 			defer resp.Body.Close()
@@ -80,10 +86,10 @@ func (c *terminationCollector) Collect(ch chan<- prometheus.Metric) {
 			// so parse error is not fatal
 			if err != nil {
 				log.Errorf("Couldn't parse instance-action metadata: %s", err)
-				ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 0, instanceId)
+				ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 0, instanceId, spotinstStatus)
 			} else {
 				log.Infof("instance-action endpoint available, termination time: %v", ia.Time)
-				ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 1, ia.Action, instanceId)
+				ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 1, ia.Action, instanceId, spotinstStatus)
 				delta := ia.Time.Sub(time.Now())
 				if delta.Seconds() > 0 {
 					ch <- prometheus.MustNewConstMetric(c.terminationTime, prometheus.GaugeValue, delta.Seconds(), instanceId)
