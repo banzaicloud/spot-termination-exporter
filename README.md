@@ -11,22 +11,26 @@ Prometheus [exporters](https://prometheus.io/docs/instrumenting/writing_exporter
 
 ### Spot instance termination notice
 
-The Termination Notice is accessible to code running on the instance via the instance’s metadata at `http://169.254.169.254/latest/meta-data/spot/termination-time`. This field becomes available when the instance has been marked for termination and will contain the time when a shutdown signal will be sent to the instance’s operating system. 
-At that time, the Spot Instance Request’s bid status will be set to `marked-for-termination.`  
+The Termination Notice is accessible to code running on the instance via the instance’s metadata at `http://169.254.169.254/latest/meta-data/spot/termination-time`. This field becomes available when the instance has been marked for termination and will contain the time when a shutdown signal will be sent to the instance’s operating system.
+At that time, the Spot Instance Request’s bid status will be set to `marked-for-termination.`
 The bid status is accessible via the `DescribeSpotInstanceRequests` API for use by programs that manage Spot bids and instances.
+
+### Spot instance rebalance recommendations
+
+[Rebalance recommendations](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/rebalance-recommendations.html) are advance notice that a given spot instance is at elevated risk of spot disruption, they can either be accessed via AWS EventBridge or via the instance metadata endpoint. A number of AWS tools automatically handle rebalance recommendations, for instance [EKS managed node groups](https://docs.aws.amazon.com/eks/latest/userguide/managed-node-groups.html#managed-node-group-capacity-types).
 
 ### Quick start
 
 The project uses the [promu](https://github.com/prometheus/promu) Prometheus utility tool. To build the exporter `promu` needs to be installed. To install promu and build the exporter:
 
-```
+```bash
 go get github.com/prometheus/promu
 promu build
 ```
 
 The following options can be configured when starting the exporter:
 
-```
+```bash
 ./spot-termination-exporter --help
 Usage of ./spot-termintation-exporter:
   -bind-addr string
@@ -42,19 +46,22 @@ Usage of ./spot-termintation-exporter:
 
 ### Test locally
 
-The AWS instance metadata is available at `http://169.254.169.254/latest/meta-data/`. By default this is the endpoint that is being queried by the exporter but it is quite hard to reproduce a termination notice on an AWS instance for testing, so the meta-data endpoint can be changed in the configuration.
-There is a test server in the `utils` directory that can be used to mock the behavior of the metadata endpoint. It listens on port 9092 and provides dummy responses for `/instance-id` and `/spot/instance-action`. It can be started with:
-```
+The AWS instance metadata is available at `http://169.254.169.254/latest/meta-data/`. By default this is the endpoint that is being queried by the exporter but it is quite hard to reproduce a termination notice or rebalance recommendation on an AWS instance for testing, so the meta-data endpoint can be changed in the configuration.
+There is a test server in the `utils` directory that can be used to mock the behavior of the metadata endpoint. It listens on port 9092 and provides dummy responses for `/instance-id`, `/spot/instance-action`, `instance-type`, and `events/recommendations/rebalance`. It can be started with:
+
+```bash
 go run util/test_server.go
 ```
+
 The exporter can be started with this configuration to query this endpoint locally:
-```
+
+```bash
 ./spot-termination-exporter --metadata-endpoint http://localhost:9092/latest/meta-data/ --log-level debug
 ```
 
 ### Metrics
 
-```
+```text
 # HELP aws_instance_metadata_service_available Metadata service available
 # TYPE aws_instance_metadata_service_available gauge
 aws_instance_metadata_service_available{instance_id="i-0d2aab13057917887"} 1
