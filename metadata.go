@@ -85,14 +85,12 @@ func (c *terminationCollector) Collect(ch chan<- prometheus.Metric) {
 	if err != nil {
 		log.Errorf("Failed to fetch data from metadata service: %s", err)
 		ch <- prometheus.MustNewConstMetric(c.scrapeSuccessful, prometheus.GaugeValue, 0, instanceId)
-		return
 	} else {
 		ch <- prometheus.MustNewConstMetric(c.scrapeSuccessful, prometheus.GaugeValue, 1, instanceId)
 
 		if resp.StatusCode == 404 {
 			log.Debug("instance-action endpoint not found")
 			ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 0, "", instanceId, instanceType)
-			return
 		} else {
 			defer resp.Body.Close()
 			body, _ := ioutil.ReadAll(resp.Body)
@@ -120,6 +118,7 @@ func (c *terminationCollector) Collect(ch chan<- prometheus.Metric) {
 	if err != nil {
 		log.Errorf("Failed to fetch events data from metadata service: %s", err)
 		ch <- prometheus.MustNewConstMetric(c.rebalanceScrapeSuccessful, prometheus.GaugeValue, 0, instanceId)
+		// Return early as this is the last metric/metadata scrape attempt
 		return
 	} else {
 		ch <- prometheus.MustNewConstMetric(c.rebalanceScrapeSuccessful, prometheus.GaugeValue, 1, instanceId)
@@ -127,6 +126,7 @@ func (c *terminationCollector) Collect(ch chan<- prometheus.Metric) {
 		if eventResp.StatusCode == 404 {
 			log.Debug("rebalance endpoint not found")
 			ch <- prometheus.MustNewConstMetric(c.rebalanceIndicator, prometheus.GaugeValue, 0, instanceId, instanceType)
+			// Return early as this is the last metric/metadata scrape attempt
 			return
 		} else {
 			defer eventResp.Body.Close()
