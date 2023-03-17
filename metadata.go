@@ -25,7 +25,7 @@ func NewTerminationCollector(me string) *terminationCollector {
 	return &terminationCollector{
 		metadataEndpoint:     me,
 		scrapeSuccessful:     prometheus.NewDesc("aws_instance_metadata_service_available", "Metadata service available", []string{"instance_id"}, nil),
-		terminationIndicator: prometheus.NewDesc("aws_instance_termination_imminent", "Instance is about to be terminated", []string{"instance_action", "instance_id"}, nil),
+		terminationIndicator: prometheus.NewDesc("aws_instance_termination_imminent", "Instance is about to be terminated", []string{"instance_action", "instance_id", "node"}, nil),
 		terminationTime:      prometheus.NewDesc("aws_instance_termination_in", "Instance will be terminated in", []string{"instance_id"}, nil),
 	}
 }
@@ -54,8 +54,23 @@ func (c *terminationCollector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 	defer idResp.Body.Close()
-	body, _ := ioutil.ReadAll(idResp.Body)
-	instanceId = string(body)
+	idBody, _ := ioutil.ReadAll(idResp.Body)
+	instanceId = string(idBody)
+
+	nodeResp, err := client.Get(c.metadataEndpoint + "local-hostname")
+	var nodeLocalHostname string
+	if err != nil {
+		log.Errorf("couldn't parse local-hostname from metadata: %s", err.Error())
+		return
+	}
+	if nodeResp.StatusCode == 404 {
+		log.Errorf("couldn't parse local-hostname from metadata: endpoint not found")
+		return
+	}
+	defer nodeResp.Body.Close()
+	nodeBody, _ := ioutil.ReadAll(nodeResp.Body)
+	nodeLocalHostname = string(nodeBody)
+
 
 	resp, err := client.Get(c.metadataEndpoint + "spot/instance-action")
 	if err != nil {
@@ -67,7 +82,7 @@ func (c *terminationCollector) Collect(ch chan<- prometheus.Metric) {
 
 		if resp.StatusCode == 404 {
 			log.Debug("instance-action endpoint not found")
-			ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 0, "", instanceId)
+			ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 0, "", instanceId, nodeLocalHostname)
 			return
 		} else {
 			defer resp.Body.Close()
@@ -80,10 +95,10 @@ func (c *terminationCollector) Collect(ch chan<- prometheus.Metric) {
 			// so parse error is not fatal
 			if err != nil {
 				log.Errorf("Couldn't parse instance-action metadata: %s", err)
-				ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 0, instanceId)
+				ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 0, instanceId, nodeLocalHostname)
 			} else {
 				log.Infof("instance-action endpoint available, termination time: %v", ia.Time)
-				ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 1, ia.Action, instanceId)
+				ch <- prometheus.MustNewConstMetric(c.terminationIndicator, prometheus.GaugeValue, 1, ia.Action, instanceId, nodeLocalHostname)
 				delta := ia.Time.Sub(time.Now())
 				if delta.Seconds() > 0 {
 					ch <- prometheus.MustNewConstMetric(c.terminationTime, prometheus.GaugeValue, delta.Seconds(), instanceId)
