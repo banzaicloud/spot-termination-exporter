@@ -5,13 +5,14 @@ on:
     branches:
       - master
       - feature/ci-cd
-  workflow_dispatch:
 
 jobs:
   push-store-image:
     runs-on: ubuntu-latest
     defaults:
       run:
+        shell: bash
+
     steps:
       - name: 'Checkout GitHub Action'
         uses: actions/checkout@v3
